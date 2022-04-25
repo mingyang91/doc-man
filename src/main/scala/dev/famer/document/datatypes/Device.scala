@@ -1,5 +1,8 @@
 package dev.famer.document.datatypes
 
+import io.circe.Codec
+import io.circe.generic.semiauto.deriveCodec
+
 case class Device(requester: String,
                   address: String,
                   model: String,
@@ -12,3 +15,6 @@ case class Device(requester: String,
                   accordingTo: String,
                   equipment: String,
                   testItem: String)
+
+object Device:
+  given Codec[Device] = deriveCodec[Device]
