@@ -1,26 +1,20 @@
 package dev.famer.document
 
+import cats.implicits.*
+import cats.effect.{Async, MonadCancelThrow, Resource, Sync}
 import dev.famer.document.datatypes.{Device, Item, ReportInfo, Values}
-import zio.{Chunk, Scope, ZIO}
+import fs2.io.file.Files
+import fs2.{Chunk, Stream}
 
-import javax.xml.namespace.QName
-import scala.jdk.CollectionConverters.*
-import play.twirl.api.HtmlFormat
-
-import java.net.{URI, URLEncoder}
-import zio.nio.file.{FileSystem, Files, Path}
-
-import java.io.IOException
+import java.net.URI
+import java.nio.file.{FileSystem, FileSystems, Path}
 import java.time.LocalDate
-import java.util.zip.ZipFile
-import scala.compiletime.constValueTuple
-import scala.deriving.Mirror
-import scala.util.{Failure, Success, Try}
-import TupleUtils.*
-
 import java.time.format.DateTimeFormatter
+import scala.jdk.CollectionConverters._
 
 object Utils {
+
+  import dev.famer.document.TupleUtils.*
 
   private val device = Device(
     requester = "上海市黄浦区外滩街道社区卫生服务中心",
@@ -75,43 +69,46 @@ object Utils {
 
   private val PATH_TO_DOCUMENT_XML = "word/document.xml"
   private val PATH_TO_HEADER1_XML = "word/header1.xml"
-  def replaceIntoDocx(fs: FileSystem, target: String, bytes: Chunk[Byte]): ZIO[Any, IOException, Unit] =
-    val path = fs.getPath(target)
+
+  def replaceIntoDocx[F[_] : Async : MonadCancelThrow](fs: FileSystem, target: String, bytes: Chunk[Byte]): F[Unit] =
+    val path = fs2.io.file.Path.fromNioPath(fs.getPath(target))
     for
-      _ <- Files.delete(path)
-      _ <- Files.createFile(path)
-      _ <- Files.writeBytes(path, bytes)
+      _ <- Files[F].delete(path)
+      _ <- Files[F].createFile(path)
+      pipe = Files[F].writeAll(path)
+      _ <- Stream.chunk[F, Byte](bytes).through(pipe).compile.drain
     yield ()
 
 
-  def useZipFS(path: Path): ZIO[Scope, Throwable, FileSystem] =
-    for
-      uri  <- path.toUri
-      full  = URI.create("jar:" + uri.toString)
-      fs   <- ZIO.acquireRelease(FileSystem.newFileSystem(full, "create" -> "false"))(_.close.ignore)
-    yield fs
+  private val env = Map("create" -> "false").asJava
+
+  def useZipFS[F[_] : Sync](path: Path): Resource[F, FileSystem] =
+    val uri = path.toUri
+    val full = URI.create("jar:" + uri.toString)
+    val acquire = Sync[F].blocking(FileSystems.newFileSystem(full, env))
+
+    def release(fs: FileSystem) = Sync[F].blocking(fs.close())
+
+    Resource.make[F, FileSystem](acquire)(release)
 
 
-  def replace(path: Path,
-              headerBytes: Chunk[Byte],
-              bodyBytes: Chunk[Byte]): ZIO[Any, Throwable, Unit] = ZIO.scoped {
-    for
-      zipFs <- useZipFS(path)
-      _ <- replaceIntoDocx(zipFs, PATH_TO_DOCUMENT_XML, bodyBytes)
-      _ <- replaceIntoDocx(zipFs, PATH_TO_HEADER1_XML, headerBytes)
-    yield ()
-  }
+  def replace[F[_] : Sync : Async : MonadCancelThrow](path: Path,
+                                                      headerBytes: Chunk[Byte],
+                                                      bodyBytes: Chunk[Byte]): F[Unit] =
+    useZipFS[F](path).use { zipFs =>
+      replaceIntoDocx(zipFs, PATH_TO_DOCUMENT_XML, bodyBytes) *>
+        replaceIntoDocx(zipFs, PATH_TO_HEADER1_XML, headerBytes)
+    }
 
-  private val XML_HEADER = Chunk.from("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>".getBytes())
-  def render(path: Path): ZIO[Any, Throwable, Unit] =
+
+  private val XML_HEADER = Chunk.array("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>".getBytes())
+
+  def render[F[_] : Sync : Async : MonadCancelThrow](path: Path): F[Unit] =
     val header = renderHeader1()
     val content = renderDocument()
-    replace(
+    replace[F](
       path,
-      XML_HEADER ++ Chunk.from(header.getBytes()),
-      XML_HEADER ++ Chunk.from(content.getBytes())
+      XML_HEADER ++ Chunk.array(header.getBytes()),
+      XML_HEADER ++ Chunk.array(content.getBytes())
     )
 }
-
-
-
