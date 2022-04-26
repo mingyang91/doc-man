@@ -15,7 +15,7 @@ import java.time.format.DateTimeFormatter
 
 object Main extends IOApp:
   override def run(args: List[String]): IO[ExitCode] =
-    HttpServer.start(ip"::", port"9000")
+    HttpServer.start(ip"0.0.0.0", port"9000")
       .use(_ => IO.never)
       .as(ExitCode.Success)
 
