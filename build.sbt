@@ -15,8 +15,14 @@ lazy val root = (project in file("."))
       "com.softwaremill.sttp.tapir" %% "tapir-aws-lambda" % "1.0.0-M7",
       "com.softwaremill.sttp.tapir" %% "tapir-aws-sam" % "1.0.0-M7",
       "com.amazonaws" % "aws-lambda-java-runtime-interface-client" % "2.1.1",
-      "org.typelevel" %% "cats-effect-testing-specs2" % "1.4.0" % Test
+      "org.typelevel" %% "cats-effect-testing-specs2" % "1.4.0" % Test,
+      "org.tpolecat" %% "doobie-core" % "1.0.0-RC2",
+      "org.tpolecat" %% "doobie-postgres"  % "1.0.0-RC2",
+      "com.github.jwt-scala" %% "jwt-circe" % "9.0.5",
+      "org.typelevel" %% "log4cats-core"    % "2.2.0",
+      "org.typelevel" %% "log4cats-slf4j"   % "2.2.0",
     ),
+    scalacOptions ++= Seq("-Xmax-inlines", "64"),
     testFrameworks += new TestFramework("zio.test.sbt.ZTestFramework"),
     excludeDependencies +="org.scala-lang.modules" % "scala-collection-compat_2.13",
   )

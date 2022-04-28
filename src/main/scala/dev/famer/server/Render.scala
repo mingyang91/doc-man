@@ -34,6 +34,3 @@ object Render:
     yield Right(dist.toNioPath.toFile)
 
   def router[F[_]: Monad: Async] = ep.serverLogic(logic)
-
-  def routes[F[_]: Monad: Async]: HttpRoutes[F] =
-    Http4sServerInterpreter[F]().toRoutes(router)

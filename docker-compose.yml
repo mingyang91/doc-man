@@ -21,12 +21,17 @@ services:
     build: target/docker/stage
     environment:
       JAVA_OPTS: '-Djava.net.preferIPv4Stack=true -Djava.net.preferIPv4Addresses=true'
+      POSTGRES_HOST: postgres
+      POSTGRES_URL: jdbc:postgresql://postgres:5432/postgres
+      POSTGRES_USERNAME: postgres
+      POSTGRES_PASSWORD: postgrespassword
   graphql-engine:
-    image: hasura/graphql-engine:v2.5.1
+    image: hasura/graphql-engine:v2.6.0
     ports:
       - "8080:8080"
     depends_on:
       - "postgres"
+      - "render"
     restart: always
     environment:
       ## postgres database to store Hasura metadata
@@ -38,6 +43,9 @@ services:
       ## enable debugging mode. It is recommended to disable this in production
       HASURA_GRAPHQL_DEV_MODE: "true"
       HASURA_GRAPHQL_ENABLED_LOG_TYPES: startup, http-log, webhook-log, websocket-log, query-log
+      HASURA_GRAPHQL_AUTH_HOOK: "http://render:9000/private-api/auth-hook"
+      HASURA_GRAPHQL_AUTH_HOOK_MODE: "POST"
+      HASURA_GRAPHQL_ADMIN_SECRET: "adminsecret"
       ## uncomment next line to set an admin secret
       # HASURA_GRAPHQL_ADMIN_SECRET: myadminsecretkey
 volumes:

@@ -13,8 +13,8 @@ create table device
   "accordingTo" varchar(128),
   equipment     varchar(128),
   item          varchar(128),
-  createTime   timestamp default now() not null,
-  updateTime   timestamp default now() not null,
+  "createTime"  timestamp default now() not null,
+  "updateTime"  timestamp default now() not null,
 
   unique (requester, address, name, "modelNo", "deviceNo")
 );
@@ -34,15 +34,14 @@ CREATE TYPE role AS ENUM ('admin', 'editor', 'viewer');
 
 create table "user"
 (
-  username varchar                  not null
-      constraint user_pk
-          primary key,
-  password varchar                  not null,
-  role     role default 'viewer' not null
+    id       SERIAL                   not null primary key,
+    username varchar                  not null,
+    password varchar                  not null,
+    role     role    default 'viewer' not null
 );
 
 create unique index user_username_uindex
-  on "user" (username);
+    on "user" (username);
 
 create table "report"
 (
@@ -51,8 +50,7 @@ create table "report"
   params jsonb not null,
   file varchar,
   "createTime" timestamp not null default now(),
-  "updateTime" timestamp not null default now(),
-  "deleteTime" timestamp
+  "updateTime" timestamp not null default now()
 );
 
 create unique index report_no_uindex on "report" ("reportNo");
