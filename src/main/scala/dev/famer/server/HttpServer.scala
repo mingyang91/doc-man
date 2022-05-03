@@ -29,6 +29,7 @@ object HttpServer:
     Http4sServerInterpreter[F]().toRoutes(
       List(
         Login.router[F],
+        Logout.router[F],
         Render.router[F],
         AuthHook.router[F],
         CheckLogin.router[F],
