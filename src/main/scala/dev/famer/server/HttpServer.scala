@@ -31,6 +31,7 @@ object HttpServer:
         Login.router[F],
         Render.router[F],
         AuthHook.router[F],
+        CheckLogin.router[F],
       )
     )
 

@@ -36,15 +36,6 @@ object AuthHook:
         oneOfVariant(statusCode(StatusCode.InternalServerError).and(jsonBody[AuthHookResponse.Failed])),
       ))
 
-  given Codec[AuthHookPayload] = deriveCodec[AuthHookPayload]
-
-  given Codec[AuthHookRequest] = deriveCodec[AuthHookRequest]
-
-  given Schema[Json] = Schema.binary
-
-  given Codec[AuthHookResponse.Unauthorized] = deriveCodec[AuthHookResponse.Unauthorized]
-
-  given Codec[AuthHookResponse.Failed] = deriveCodec[AuthHookResponse.Failed]
 
   def router[F[_]: Async: Logger] = ep.serverLogic(logic[F])
 
@@ -52,17 +43,13 @@ object AuthHook:
     val flow = for
       cookieStr <- EitherT.fromOption[F](payload.headers.get("Cookie"), Unauthorized("No cookie found"))
       cookies   <- EitherT.fromEither[F](Cookie.parse(cookieStr))
-                          .leftMap(Unauthorized(_))
+                          .leftMap(Unauthorized.apply)
       _         <- EitherT.rightT(Logger[F].debug("auth-hook" + payload.toString))
       token     <- EitherT.fromOption[F](cookies.find(_.name == "token"), Unauthorized("No token found in cookie"))
-      claim     <- EitherT(Async[F].delay(JwtCirce.decode(token.value, SECRET, JwtAlgorithm.HS256 :: Nil).toEither))
-                          .leftMap(e => Unauthorized(e.getMessage))
-      json      <- EitherT.fromEither(io.circe.parser.parse(claim.content))
-                          .leftMap(e => Unauthorized(e.getMessage))
-      info      <- EitherT.fromEither(json.as[UserInfo])
-                          .leftMap(e => Unauthorized(e.getMessage))
-      exp       <- EitherT.fromOption(claim.expiration, Unauthorized("Token not have expire"))
+      infoExp   <- EitherT.fromEither[F](Login.getUserInfoAndExp(token.value))
+                          .leftMap(Unauthorized.apply)
     yield
+      val (info, exp) = infoExp
       val expires = Instant.ofEpochSecond(exp)
       Map(
         "X-Hasura-User-Id" -> info.id.toString,
@@ -73,26 +60,25 @@ object AuthHook:
 
     flow.value
 
-  // {
-  //  "headers": {
-  //    "header-key1": "header-value1",
-  //    "header-key2": "header-value2"
-  //  },
-  //  "request": {
-  //    "variables": {
-  //      "a": 1
-  //    },
-  //    "operationName": "UserQuery",
-  //    "query": "query UserQuery($a:  Int) {\n  users(where:  {id:  {_eq:  $a}}){\n    id\n  }\n}\n"
-  //  }
-  //}
+  given Schema[Json] = Schema.binary
+
   case class AuthHookPayload(headers: Map[String, String],
                              request: AuthHookRequest)
+
+  object AuthHookPayload:
+    given Codec[AuthHookPayload] = deriveCodec[AuthHookPayload]
 
   case class AuthHookRequest(variables: Option[Map[String, Json]],
                              operationName: Option[String],
                              query: String)
 
+  object AuthHookRequest:
+    given Codec[AuthHookRequest] = deriveCodec[AuthHookRequest]
+
   enum AuthHookResponse:
     case Unauthorized(message: String)
     case Failed(message: String)
+
+  object AuthHookResponse:
+    given Codec[AuthHookResponse.Unauthorized] = deriveCodec[AuthHookResponse.Unauthorized]
+    given Codec[AuthHookResponse.Failed] = deriveCodec[AuthHookResponse.Failed]

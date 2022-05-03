@@ -1,6 +1,7 @@
 package dev.famer
 
-import cats.effect.{ExitCode, IO, IOApp}
+import cats.effect.kernel.Resource
+import cats.effect.{ExitCode, IO, IOApp, ResourceApp}
 import dev.famer.document.Utils
 import dev.famer.document.datatypes.{Device, Item, RenderParameters, ReportInfo}
 import dev.famer.server.HttpServer
@@ -13,11 +14,7 @@ import com.comcast.ip4s.*
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
-object Main extends IOApp:
-  override def run(args: List[String]): IO[ExitCode] =
-    HttpServer.start(ip"0.0.0.0", port"9000")
-      .use(_ => IO.never)
-      .as(ExitCode.Success)
-
-
+object Main extends ResourceApp.Forever:
+  def run(args: List[String]): Resource[IO, Unit] =
+    HttpServer.start(ip"0.0.0.0", port"9000").map(_ => ())
 
