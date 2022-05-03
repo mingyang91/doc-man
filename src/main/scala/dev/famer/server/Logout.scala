@@ -24,14 +24,12 @@ object Logout:
       .out(setCookie("token"))
 
   def logic[F[_] : Async]: F[Either[Unit, CookieValueWithMeta]] =
-    for
-      exp <- Clock[F].realTime
-    yield
+    Async[F].pure(
       Right(
         CookieValueWithMeta(
           value = "",
-          expires = Some(Instant.ofEpochMilli(exp.toMillis)),
-          maxAge = None,
+          expires = None,
+          maxAge = Some(0),
           domain = None,
           path = Some("/"),
           secure = false,
@@ -40,6 +38,7 @@ object Logout:
           otherDirectives = Map.empty
         )
       )
+    )
 
 
   def router[F[_] : Async] = ep.serverLogic(_ => logic[F])
