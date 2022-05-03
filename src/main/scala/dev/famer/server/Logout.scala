@@ -19,8 +19,8 @@ object Logout:
 
   val ep: Endpoint[Unit, Unit, Unit, CookieValueWithMeta, Any] =
     endpoint
-      .post
-      .in("api" / "login")
+      .get
+      .in("api" / "logout")
       .out(setCookie("token"))
 
   def logic[F[_] : Async]: F[Either[Unit, CookieValueWithMeta]] =
