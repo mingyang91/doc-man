@@ -84,9 +84,7 @@ object Login:
       claim     <- JwtCirce.decode(token, SECRET, JwtAlgorithm.HS256 :: Nil)
                       .toEither
                       .left.map(e => e.getMessage)
-      json      <- io.circe.parser.parse(claim.content)
-                      .left.map(e => e.getMessage)
-      info      <- json.as[UserInfo]
+      info      <- io.circe.parser.decode[UserInfo](claim.content)
                       .left.map(e => e.getMessage)
       exp       <- claim.expiration
                       .toRight("Token not have expire")
