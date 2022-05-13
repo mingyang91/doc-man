@@ -23,13 +23,9 @@ import java.time.Instant
 
 object Login:
 
-  case class LoginRequest(username: String, password: String)
-  object LoginRequest:
-    given Codec[LoginRequest] = deriveCodec[LoginRequest]
+  case class LoginRequest(username: String, password: String) derives Encoder.AsObject, Decoder
 
-  case class UserInfo(id: Int, role: String, username: String)
-  object UserInfo:
-    given Codec[UserInfo] = deriveCodec[UserInfo]
+  case class UserInfo(id: Int, role: String, username: String) derives Encoder.AsObject, Decoder
 
   enum AuthResponse:
     case Unauthorized(message: String)

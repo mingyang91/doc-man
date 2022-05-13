@@ -2,14 +2,12 @@ package dev.famer.server
 
 import cats.Monad
 import cats.implicits._
-import io.circe.{Codec, Decoder, Encoder}
 import sttp.tapir.*
 import sttp.tapir.generic.auto.*
 import sttp.tapir.server.http4s.Http4sServerInterpreter
 import cats.effect.{Async, IO, MonadCancelThrow, Sync}
 import dev.famer.document.datatypes.{Device, Item, RenderParameters, ReportInfo, Values}
 import fs2.io.file.{Files, Path}
-import io.circe.generic.semiauto.deriveCodec
 import org.http4s.HttpRoutes
 import sttp.tapir.json.circe.jsonBody
 import sttp.tapir.serverless.aws.lambda.AwsCatsEffectServerInterpreter

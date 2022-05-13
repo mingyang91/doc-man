@@ -63,17 +63,11 @@ object AuthHook:
   given Schema[Json] = Schema.binary
 
   case class AuthHookPayload(headers: Map[String, String],
-                             request: AuthHookRequest)
-
-  object AuthHookPayload:
-    given Codec[AuthHookPayload] = deriveCodec[AuthHookPayload]
+                             request: AuthHookRequest) derives Encoder.AsObject, Decoder
 
   case class AuthHookRequest(variables: Option[Map[String, Json]],
                              operationName: Option[String],
-                             query: String)
-
-  object AuthHookRequest:
-    given Codec[AuthHookRequest] = deriveCodec[AuthHookRequest]
+                             query: String) derives Encoder.AsObject, Decoder
 
   enum AuthHookResponse:
     case Unauthorized(message: String)

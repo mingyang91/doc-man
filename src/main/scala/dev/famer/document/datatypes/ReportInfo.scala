@@ -1,10 +1,6 @@
 package dev.famer.document.datatypes
 
-import io.circe.Codec
-import io.circe.generic.semiauto.deriveCodec
+import io.circe.{Decoder, Encoder}
 
 case class ReportInfo(reportNo: String,
-                      date: String)
-
-object ReportInfo:
-  given Codec[ReportInfo] = deriveCodec[ReportInfo]
+                      date: String) derives Encoder.AsObject, Decoder

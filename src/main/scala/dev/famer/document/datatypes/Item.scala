@@ -1,7 +1,6 @@
 package dev.famer.document.datatypes
 
-import io.circe.Codec
-import io.circe.generic.semiauto.deriveCodec
+import io.circe.{Decoder, Encoder}
 
 case class Item(name: String,
                 conditionFactor: String,
@@ -9,8 +8,4 @@ case class Item(name: String,
                 result: String,
                 acceptanceRequire: String,
                 stateRequire: String,
-                conclusion: String
-               )
-
-object Item:
-  given Codec[Item] = deriveCodec[Item]
+                conclusion: String) derives Encoder.AsObject, Decoder
