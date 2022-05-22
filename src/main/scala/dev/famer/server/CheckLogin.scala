@@ -31,11 +31,9 @@ object CheckLogin:
       ))
 
   def logic[F[_]: Async](token: String): F[Either[CheckLoginResponse, Login.UserInfo]] =
-    val flow = for {
-      userInfoAndExp <- EitherT.fromEither[F](Login.getUserInfoAndExp(token))
-        .leftMap(e => CheckLoginResponse.Unauthorized(e))
-    } yield userInfoAndExp._1
-
-    flow.value
+    EitherT.fromEither[F](Login.getUserInfoAndExp(token))
+      .leftMap(e => CheckLoginResponse.Unauthorized(e))
+      .map { case (userInfo, _) => userInfo }
+      .value
 
   def router[F[_]: Async] = ep.serverLogic(logic[F])

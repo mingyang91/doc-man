@@ -49,7 +49,10 @@ object Login:
   def logic[F[_] : Async : Transactor](req: LoginRequest): F[Either[AuthResponse, CookieValueWithMeta]] =
     val flow = for
       timestamp <- EitherT.liftF(Clock[F].realTime)
-      row       <- EitherT.fromOptionF(execute[F](req.username, req.password), AuthResponse.Unauthorized(s"用户名(${req.username})不存在或密码错误"))
+      row       <- EitherT.fromOptionF(
+                      fopt = execute[F](req.username, req.password),
+                      ifNone = AuthResponse.Unauthorized(s"用户名(${req.username})不存在或密码错误")
+                  )
     yield
       val exp = timestamp + 30.days
       val claim = JwtClaim(
