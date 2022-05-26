@@ -31,7 +31,7 @@ lazy val root = (project in file("."))
 lazy val template = (project in file("templates"))
   .settings(
     name := "templates",
-    scalaVersion := "2.13.6",
+    scalaVersion := "3.1.2",
     TwirlKeys.templateImports += "dev.famer.document.datatypes._",
   )
   .enablePlugins(SbtTwirl)
