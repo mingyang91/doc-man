@@ -1,7 +1,7 @@
 version: '3.6'
 services:
   ingress:
-    image: 481436215387.dkr.ecr.ap-east-1.amazonaws.com/docman-ui:93e1a9740ee276782d2e36b2da2b324e6d78af4f
+    image: 481436215387.dkr.ecr.ap-east-1.amazonaws.com/docman-ui:b8926dc5a844c7590a0bbabaf762ea50e2c0d958
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf
     ports:
