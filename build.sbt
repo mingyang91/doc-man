@@ -9,11 +9,11 @@ lazy val root = (project in file("."))
   .settings(
     name := "doc-man",
     libraryDependencies ++= Seq(
-      "org.http4s" %% "http4s-dsl" % "0.23.11",
-      "org.http4s" %% "http4s-ember-server" % "0.23.11",
-      "com.softwaremill.sttp.tapir" %% "tapir-http4s-server" % "1.0.0-M7",
-      "com.softwaremill.sttp.tapir" %% "tapir-aws-lambda" % "1.0.0-M7",
-      "com.softwaremill.sttp.tapir" %% "tapir-aws-sam" % "1.0.0-M7",
+      "org.http4s" %% "http4s-dsl" % "0.23.13",
+      "org.http4s" %% "http4s-ember-server" % "0.23.13",
+      "com.softwaremill.sttp.tapir" %% "tapir-http4s-server" % "1.0.1",
+      "com.softwaremill.sttp.tapir" %% "tapir-aws-lambda" % "1.0.1",
+      "com.softwaremill.sttp.tapir" %% "tapir-aws-sam" % "1.0.1",
       "com.amazonaws" % "aws-lambda-java-runtime-interface-client" % "2.1.1",
       "org.typelevel" %% "cats-effect-testing-specs2" % "1.4.0" % Test,
       "org.tpolecat" %% "doobie-core" % "1.0.0-RC2",
