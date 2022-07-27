@@ -1,4 +1,4 @@
-ThisBuild / scalaVersion     := "3.1.2"
+ThisBuild / scalaVersion     := "3.1.3"
 ThisBuild / version          := "0.1.0-SNAPSHOT"
 ThisBuild / organization     := "com.example"
 ThisBuild / organizationName := "example"
@@ -24,14 +24,13 @@ lazy val root = (project in file("."))
     ),
     scalacOptions ++= Seq("-Xmax-inlines", "64"),
     testFrameworks += new TestFramework("zio.test.sbt.ZTestFramework"),
-    excludeDependencies +="org.scala-lang.modules" % "scala-collection-compat_2.13",
   )
   .dependsOn(template)
 
 lazy val template = (project in file("templates"))
   .settings(
     name := "templates",
-    scalaVersion := "3.1.2",
+    scalaVersion := "3.1.3",
     TwirlKeys.templateImports += "dev.famer.document.datatypes._",
   )
   .enablePlugins(SbtTwirl)
