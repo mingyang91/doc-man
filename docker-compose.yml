@@ -17,6 +17,8 @@ services:
       - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
     environment:
       POSTGRES_PASSWORD: postgrespassword
+    ports:
+      - '127.0.0.1:5432:5432'
   render:
     build: target/docker/stage
     environment:
