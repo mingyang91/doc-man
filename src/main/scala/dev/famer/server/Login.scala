@@ -35,18 +35,21 @@ object Login:
     given Codec[AuthResponse.Unauthorized] = deriveCodec[AuthResponse.Unauthorized]
     given Codec[AuthResponse.Failed] = deriveCodec[AuthResponse.Failed]
 
-  val ep: Endpoint[Unit, LoginRequest, AuthResponse, CookieValueWithMeta, Any] =
+  case class LoginResponse(token: String) derives Encoder.AsObject, Decoder
+
+  val ep: Endpoint[Unit, LoginRequest, AuthResponse, (CookieValueWithMeta, LoginResponse), Any] =
     endpoint
       .post
       .in("api" / "login")
       .in(jsonBody[LoginRequest])
       .out(setCookie("token"))
+      .out(jsonBody[LoginResponse])
       .errorOut(oneOf[AuthResponse](
         oneOfVariant(statusCode(StatusCode.Unauthorized).and(jsonBody[AuthResponse.Unauthorized])),
         oneOfVariant(statusCode(StatusCode.InternalServerError).and(jsonBody[AuthResponse.Failed]))
       ))
 
-  def logic[F[_] : Async : Transactor](req: LoginRequest): F[Either[AuthResponse, CookieValueWithMeta]] =
+  def logic[F[_] : Async : Transactor](req: LoginRequest): F[Either[AuthResponse, (CookieValueWithMeta, LoginResponse)]] =
     val flow = for
       timestamp <- EitherT.liftF(Clock[F].realTime)
       row       <- EitherT.fromOptionF(
@@ -72,7 +75,7 @@ object Login:
         httpOnly = true,
         sameSite = Some(SameSite.Strict),
         otherDirectives = Map.empty
-      )
+      ) -> LoginResponse(token)
 
     flow.value
 
