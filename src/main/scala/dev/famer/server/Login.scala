@@ -42,8 +42,7 @@ object Login:
       .post
       .in("api" / "login")
       .in(jsonBody[LoginRequest])
-      .out(setCookie("token"))
-      .out(jsonBody[LoginResponse])
+      .out(setCookie("token") and jsonBody[LoginResponse])
       .errorOut(oneOf[AuthResponse](
         oneOfVariant(statusCode(StatusCode.Unauthorized).and(jsonBody[AuthResponse.Unauthorized])),
         oneOfVariant(statusCode(StatusCode.InternalServerError).and(jsonBody[AuthResponse.Failed]))
