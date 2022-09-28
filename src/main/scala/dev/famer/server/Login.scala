@@ -37,18 +37,18 @@ object Login:
 
   case class LoginResponse(token: String) derives Encoder.AsObject, Decoder
 
-  val ep: Endpoint[Unit, LoginRequest, AuthResponse, (CookieValueWithMeta, LoginResponse), Any] =
+  private val ep: Endpoint[Unit, LoginRequest, AuthResponse, (LoginResponse, CookieValueWithMeta), Any] =
     endpoint
       .post
       .in("api" / "login")
       .in(jsonBody[LoginRequest])
-      .out(setCookie("token") and jsonBody[LoginResponse])
+      .out(jsonBody[LoginResponse] and setCookie("token"))
       .errorOut(oneOf[AuthResponse](
         oneOfVariant(statusCode(StatusCode.Unauthorized).and(jsonBody[AuthResponse.Unauthorized])),
         oneOfVariant(statusCode(StatusCode.InternalServerError).and(jsonBody[AuthResponse.Failed]))
       ))
 
-  def logic[F[_] : Async : Transactor](req: LoginRequest): F[Either[AuthResponse, (CookieValueWithMeta, LoginResponse)]] =
+  def logic[F[_] : Async : Transactor](req: LoginRequest): F[Either[AuthResponse, (LoginResponse, CookieValueWithMeta)]] =
     val flow = for
       timestamp <- EitherT.liftF(Clock[F].realTime)
       row       <- EitherT.fromOptionF(
@@ -64,7 +64,7 @@ object Login:
       )
       val token = JwtCirce.encode(claim, SECRET, JwtAlgorithm.HS256)
 
-      CookieValueWithMeta(
+      val cookie = CookieValueWithMeta(
         value = token,
         expires = Some(Instant.ofEpochMilli(exp.toMillis)),
         maxAge = None,
@@ -74,7 +74,9 @@ object Login:
         httpOnly = true,
         sameSite = Some(SameSite.Strict),
         otherDirectives = Map.empty
-      ) -> LoginResponse(token)
+      )
+      val body = LoginResponse(token)
+      body -> cookie
 
     flow.value
 
