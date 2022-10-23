@@ -4,3 +4,5 @@ target/
 *.iml
 project/target
 .bloop
+.metals/
+.vscode
