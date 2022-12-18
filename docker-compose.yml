@@ -28,7 +28,7 @@ services:
       POSTGRES_USERNAME: postgres
       POSTGRES_PASSWORD: postgrespassword
   graphql-engine:
-    image: hasura/graphql-engine:v2.12.0
+    image: hasura/graphql-engine:v2.15.2
     ports:
       - "8080:8080"
     depends_on:

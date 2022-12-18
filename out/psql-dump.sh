@@ -1,0 +1,1 @@
+docker run -it --network=doc-man_default -e PGPASSWORD=postgrespassword postgres:12 pg_dump -h postgres -U postgres

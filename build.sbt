@@ -34,3 +34,5 @@ lazy val template = (project in file("templates"))
     TwirlKeys.templateImports += "dev.famer.document.datatypes._",
   )
   .enablePlugins(SbtTwirl)
+
+dockerBaseImage := "eclipse-temurin:17-jre"
