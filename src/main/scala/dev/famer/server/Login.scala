@@ -45,7 +45,7 @@ object Login:
         )
       )
 
-  protected def logicImpl(timestamp: FiniteDuration, row: UserIdAndRole, username: String): (LoginResponse, CookieValueWithMeta) = {
+  protected def logicImpl(timestamp: FiniteDuration, row: UserIdAndRole, username: String): (LoginResponse, CookieValueWithMeta) =
     val exp      = timestamp + 30.days
     val userInfo = UserInfo(row.id, row.role, username)
     val claim = JwtClaim(
@@ -68,13 +68,13 @@ object Login:
     )
     val body = LoginResponse(token)
     body -> cookie
-  }
+  end logicImpl
 
   private def failedMessage(username: String) = AuthResponse.Unauthorized(s"用户名(${username})不存在或密码错误")
   def logic[F[_]: Async: Transactor](req: LoginRequest): F[Either[AuthResponse, (LoginResponse, CookieValueWithMeta)]] =
-    val timestampF = EitherT.liftF(Clock[F].realTime)
-    val rowF       = EitherT.fromOptionF(fopt = execute[F](req.username, req.password), ifNone = failedMessage(req.username))
-    val flow       = for (timestamp <- timestampF; row <- rowF) yield logicImpl(timestamp, row, req.username)
+    val timestampImpl = EitherT.liftF(Clock[F].realTime)
+    val rowImpl       = EitherT.fromOptionF(fopt = execute[F](req.username, req.password), ifNone = failedMessage(req.username))
+    val flow          = for (timestamp <- timestampImpl; row <- rowImpl) yield logicImpl(timestamp, row, req.username)
     flow.value
   end logic
 
