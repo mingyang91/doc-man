@@ -47,6 +47,7 @@ object Login:
 
   protected def logicImpl(timestamp: FiniteDuration, row: UserIdAndRole, username: String): (LoginResponse, CookieValueWithMeta) =
     val exp      = timestamp + 30.days
+    val instant  = Instant.ofEpochMilli(exp.toMillis)
     val userInfo = UserInfo(row.id, row.role, username)
     val claim = JwtClaim(
       content = userInfo.asJson.noSpaces,
@@ -57,7 +58,7 @@ object Login:
 
     val cookie = CookieValueWithMeta(
       value = token,
-      expires = Some(Instant.ofEpochMilli(exp.toMillis)),
+      expires = Some(instant),
       maxAge = None,
       domain = None,
       path = Some("/"),
