@@ -11,9 +11,7 @@ object TupleUtils:
   inline private def labelsOf[A](using p: Mirror.ProductOf[A]) =
     constValueTuple[p.MirroredElemLabels]
 
-  extension [A <: Product](a: A)
-                          (using p: Mirror.ProductOf[A],
-                           fr: ToMap[Zip[p.MirroredElemLabels, p.MirroredElemTypes]])
+  extension [A <: Product](a: A)(using p: Mirror.ProductOf[A], fr: ToMap[Zip[p.MirroredElemLabels, p.MirroredElemTypes]])
     inline def toMap: Map[String, String] =
       val labels = labelsOf[A]
       val values = Tuple.fromProductTyped(a)
@@ -34,8 +32,8 @@ object TupleUtils:
   given ToMap[EmptyTuple] with
     def toMap(a: EmptyTuple): Map[String, String] = Map.empty
 
-  given [A: Encoder, H <: (String, A), T <: Tuple : ToMap]: ToMap[H *: T] with
+  given [A: Encoder, H <: (String, A), T <: Tuple: ToMap]: ToMap[H *: T] with
     def toMap(a: H *: T): Map[String, String] =
       val (key, value) = a.head
-      val t = a.tail
+      val t            = a.tail
       summon[ToMap[T]].toMap(t) + (key -> summon[Encoder[A]].encode(value))

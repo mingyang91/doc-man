@@ -1,8 +1,10 @@
-.idea
-.bsp
-target/
+/.idea/
+**/target/
+/.metals/
 *.iml
-project/target
-.bloop
-.metals/
-.vscode
+/.vscode/
+/.bsp/
+.bloop/
+**/metals.sbt
+/sbt.bat
+/sbt-launch.jar

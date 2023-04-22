@@ -36,4 +36,3 @@ object AwsLambdaEntry extends RequestStreamHandler:
       writer.write(Printer.noSpaces.print(awsRes.asJson))
       writer.flush()
     }.unsafeRunSync()
-

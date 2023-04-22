@@ -4,20 +4,20 @@ import cats.Monad
 import cats.data.EitherT
 import cats.effect.kernel.MonadCancelThrow
 import cats.effect.{Async, Clock, IO}
-import cats.implicits.*
+import cats.implicits.given
 import doobie.*
-import doobie.implicits.*
-import io.circe.generic.semiauto.deriveCodec
-import io.circe.{Codec, Decoder, Encoder, Json}
-import io.circe.syntax.*
+import doobie.implicits.given
+import io.circe.{generic => circeGeneric, syntax => circeSyntax, Decoder, Encoder}
+import circeGeneric.semiauto.deriveCodec
+import circeSyntax.given
 import sttp.model.headers.Cookie.SameSite
 import sttp.model.headers.CookieValueWithMeta
 import sttp.model.{StatusCode, Uri}
 import sttp.tapir.*
-import sttp.tapir.generic.auto.*
+import sttp.tapir.generic.auto.given
 import sttp.tapir.json.circe.jsonBody
 import pdi.jwt.{Jwt, JwtAlgorithm, JwtCirce, JwtClaim}
-import scala.concurrent.duration._
+import scala.concurrent.duration.*
 
 import java.time.Instant
 
@@ -27,79 +27,83 @@ object Login:
 
   case class UserInfo(id: Int, role: String, username: String) derives Encoder.AsObject, Decoder
 
-  enum AuthResponse:
+  enum AuthResponse derives Encoder.AsObject, Decoder:
     case Unauthorized(message: String)
     case Failed(message: String)
-
-  object AuthResponse:
-    given Codec[AuthResponse.Unauthorized] = deriveCodec[AuthResponse.Unauthorized]
-    given Codec[AuthResponse.Failed] = deriveCodec[AuthResponse.Failed]
 
   case class LoginResponse(token: String) derives Encoder.AsObject, Decoder
 
   private val ep: Endpoint[Unit, LoginRequest, AuthResponse, (LoginResponse, CookieValueWithMeta), Any] =
-    endpoint
-      .post
+    endpoint.post
       .in("api" / "login")
       .in(jsonBody[LoginRequest])
       .out(jsonBody[LoginResponse] and setCookie("token"))
-      .errorOut(oneOf[AuthResponse](
-        oneOfVariant(statusCode(StatusCode.Unauthorized).and(jsonBody[AuthResponse.Unauthorized])),
-        oneOfVariant(statusCode(StatusCode.InternalServerError).and(jsonBody[AuthResponse.Failed]))
-      ))
-
-  def logic[F[_] : Async : Transactor](req: LoginRequest): F[Either[AuthResponse, (LoginResponse, CookieValueWithMeta)]] =
-    val flow = for
-      timestamp <- EitherT.liftF(Clock[F].realTime)
-      row       <- EitherT.fromOptionF(
-                      fopt = execute[F](req.username, req.password),
-                      ifNone = AuthResponse.Unauthorized(s"用户名(${req.username})不存在或密码错误")
-                  )
-    yield
-      val exp = timestamp + 30.days
-      val claim = JwtClaim(
-        content = UserInfo(row.id, row.role, req.username).asJson.noSpaces,
-        issuedAt = Some(timestamp.toSeconds),
-        expiration = Some(exp.toSeconds)
+      .errorOut(
+        oneOf[AuthResponse](
+          oneOfVariant(statusCode(StatusCode.Unauthorized).and(jsonBody[AuthResponse])),
+          oneOfVariant(statusCode(StatusCode.InternalServerError).and(jsonBody[AuthResponse]))
+        )
       )
-      val token = JwtCirce.encode(claim, SECRET, JwtAlgorithm.HS256)
 
-      val cookie = CookieValueWithMeta(
-        value = token,
-        expires = Some(Instant.ofEpochMilli(exp.toMillis)),
-        maxAge = None,
-        domain = None,
-        path = Some("/"),
-        secure = false,
-        httpOnly = true,
-        sameSite = Some(SameSite.Strict),
-        otherDirectives = Map.empty
-      )
-      val body = LoginResponse(token)
-      body -> cookie
+  protected def logicImpl(timestamp: FiniteDuration, row: UserIdAndRole, username: String): (LoginResponse, CookieValueWithMeta) = {
+    val exp      = timestamp + 30.days
+    val userInfo = UserInfo(row.id, row.role, username)
+    val claim = JwtClaim(
+      content = userInfo.asJson.noSpaces,
+      issuedAt = Some(timestamp.toSeconds),
+      expiration = Some(exp.toSeconds)
+    )
+    val token = JwtCirce.encode(claim, SECRET, JwtAlgorithm.HS256)
 
+    val cookie = CookieValueWithMeta(
+      value = token,
+      expires = Some(Instant.ofEpochMilli(exp.toMillis)),
+      maxAge = None,
+      domain = None,
+      path = Some("/"),
+      secure = false,
+      httpOnly = true,
+      sameSite = Some(SameSite.Strict),
+      otherDirectives = Map.empty
+    )
+    val body = LoginResponse(token)
+    body -> cookie
+  }
+
+  private def failedMessage(username: String) = AuthResponse.Unauthorized(s"用户名(${username})不存在或密码错误")
+  def logic[F[_]: Async: Transactor](req: LoginRequest): F[Either[AuthResponse, (LoginResponse, CookieValueWithMeta)]] =
+    val timestampF = EitherT.liftF(Clock[F].realTime)
+    val rowF       = EitherT.fromOptionF(fopt = execute[F](req.username, req.password), ifNone = failedMessage(req.username))
+    val flow       = for (timestamp <- timestampF; row <- rowF) yield logicImpl(timestamp, row, req.username)
     flow.value
+  end logic
 
-  def router[F[_] : Async: Transactor] = ep.serverLogic(logic[F])
+  def router[F[_]: Async: Transactor] = ep.serverLogic(logic[F])
 
   def getUserInfoAndExp(token: String): Either[String, (UserInfo, Long)] =
+    val claimImpl1 = JwtCirce.decode(token, SECRET, JwtAlgorithm.HS256 :: Nil)
+    val claimImpl2 = for (e <- claimImpl1.toEither.left) yield e.getMessage
+
+    def infoImpl1(using claim: JwtClaim)                 = io.circe.parser.decode[UserInfo](claim.content)
+    val infoImpl2: JwtClaim ?=> Either[String, UserInfo] = for (e <- infoImpl1.left) yield e.getMessage
+
+    def toRight(using claim: JwtClaim) = claim.expiration.toRight("Token not have expire")
+
     for
-      claim     <- JwtCirce.decode(token, SECRET, JwtAlgorithm.HS256 :: Nil)
-                      .toEither
-                      .left.map(e => e.getMessage)
-      info      <- io.circe.parser.decode[UserInfo](claim.content)
-                      .left.map(e => e.getMessage)
-      exp       <- claim.expiration
-                      .toRight("Token not have expire")
+      given JwtClaim <- claimImpl2
+      info           <- infoImpl2
+      exp            <- toRight
     yield info -> exp
+  end getUserInfoAndExp
 
   case class UserIdAndRole(id: Int, role: String)
 
   def findUser(username: String, password: String): ConnectionIO[Option[UserIdAndRole]] =
-    sql"""SELECT id, role FROM "user" WHERE username = $username and password = $password"""
-      .query[UserIdAndRole]
-      .option
+    val sqlM = sql"""SELECT id, role FROM "user" WHERE username = $username and password = $password"""
+    sqlM.query[UserIdAndRole].option
+  end findUser
 
-  def execute[F[_] : Async : Transactor](username: String, password: String): F[Option[UserIdAndRole]] =
-    summon[Transactor[F]].trans.apply(findUser(username, password))
+  def execute[F[_]: Async](username: String, password: String)(using xa: Transactor[F]): F[Option[UserIdAndRole]] =
+    findUser(username, password).transact(xa)
 
+end Login

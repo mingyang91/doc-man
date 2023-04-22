@@ -26,48 +26,45 @@ import scala.util.Try
 
 object AuthHook:
   val ep: Endpoint[Unit, AuthHookPayload, AuthHookResponse, Map[String, String], Any] =
-    endpoint
-      .post
+    endpoint.post
       .in("private-api" / "auth-hook")
       .in(jsonBody[AuthHookPayload])
       .out(jsonBody[Map[String, String]])
-      .errorOut(oneOf[AuthHookResponse](
-        oneOfVariant(statusCode(StatusCode.Unauthorized).and(jsonBody[AuthHookResponse.Unauthorized])),
-        oneOfVariant(statusCode(StatusCode.InternalServerError).and(jsonBody[AuthHookResponse.Failed])),
-      ))
-
+      .errorOut(
+        oneOf[AuthHookResponse](
+          oneOfVariant(statusCode(StatusCode.Unauthorized).and(jsonBody[AuthHookResponse.Unauthorized])),
+          oneOfVariant(statusCode(StatusCode.InternalServerError).and(jsonBody[AuthHookResponse.Failed]))
+        )
+      )
 
   def router[F[_]: Async: Logger] = ep.serverLogic(logic[F])
 
   def logic[F[_]: Async: Logger](payload: AuthHookPayload): F[Either[AuthHookResponse, Map[String, String]]] =
     val flow = for
       cookieStr <- EitherT.fromOption[F](payload.headers.get("Cookie"), Unauthorized("No cookie found"))
-      cookies   <- EitherT.fromEither[F](Cookie.parse(cookieStr))
-                          .leftMap(Unauthorized.apply)
+      cookies   <- EitherT.fromEither[F](Cookie.parse(cookieStr)).leftMap(Unauthorized.apply)
       _         <- EitherT.rightT(Logger[F].debug("auth-hook" + payload.toString))
       token     <- EitherT.fromOption[F](cookies.find(_.name == "token"), Unauthorized("No token found in cookie"))
-      infoExp   <- EitherT.fromEither[F](Login.getUserInfoAndExp(token.value))
-                          .leftMap(Unauthorized.apply)
+      infoExp   <- EitherT.fromEither[F](Login.getUserInfoAndExp(token.value)).leftMap(Unauthorized.apply)
     yield
       val (info, exp) = infoExp
-      val expires = Instant.ofEpochSecond(exp)
+      val expires     = Instant.ofEpochSecond(exp)
       Map(
-        "X-Hasura-User-Id" -> info.id.toString,
-        "X-Hasura-Role" -> info.role,
+        "X-Hasura-User-Id"  -> info.id.toString,
+        "X-Hasura-Role"     -> info.role,
         "X-Hasura-Is-Owner" -> (info.role == "admin").toString,
-        "Expires" -> expires.atOffset(ZoneOffset.UTC).format(DateTimeFormatter.RFC_1123_DATE_TIME)// "Mon, 30 Mar 2033 13:25:18 GMT"
+        "Expires" -> expires.atOffset(ZoneOffset.UTC).format(DateTimeFormatter.RFC_1123_DATE_TIME) // "Mon, 30 Mar 2033 13:25:18 GMT"
       )
 
     flow.value
 
   given Schema[Json] = Schema.binary
 
-  case class AuthHookPayload(headers: Map[String, String],
-                             request: AuthHookRequest) derives Encoder.AsObject, Decoder
+  case class AuthHookPayload(headers: Map[String, String], request: AuthHookRequest) derives Encoder.AsObject, Decoder
 
-  case class AuthHookRequest(variables: Option[Map[String, Json]],
-                             operationName: Option[String],
-                             query: String) derives Encoder.AsObject, Decoder
+  case class AuthHookRequest(variables: Option[Map[String, Json]], operationName: Option[String], query: String)
+      derives Encoder.AsObject,
+        Decoder
 
   enum AuthHookResponse:
     case Unauthorized(message: String)
@@ -75,4 +72,4 @@ object AuthHook:
 
   object AuthHookResponse:
     given Codec[AuthHookResponse.Unauthorized] = deriveCodec[AuthHookResponse.Unauthorized]
-    given Codec[AuthHookResponse.Failed] = deriveCodec[AuthHookResponse.Failed]
+    given Codec[AuthHookResponse.Failed]       = deriveCodec[AuthHookResponse.Failed]

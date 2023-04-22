@@ -47,15 +47,14 @@ class RenderSpec extends SpecificationLike with CatsEffect:
 
   private val reportInfo = ReportInfo(
     reportNo = "FYS-2022-H-XXXX",
-    date = LocalDate.now()
-      .format(DateTimeFormatter.ofPattern("yyyy年MM月dd日")),
+    date = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy年MM月dd日"))
   )
 
   private val testParams = RenderParameters(
     device = device,
     info = reportInfo,
     items1 = List(item1),
-    items2 = List(item2),
+    items2 = List(item2)
   )
 
   "Render" should {
@@ -66,8 +65,6 @@ class RenderSpec extends SpecificationLike with CatsEffect:
         _   <- origin$.through(Files[IO].writeAll(tmp)).compile.drain
         _   <- Utils.render[IO](tmp.toNioPath, testParams)
         len <- Files[IO].size(tmp)
-      yield
-        len must_!== 0
+      yield len must_!== 0
     }
   }
-
