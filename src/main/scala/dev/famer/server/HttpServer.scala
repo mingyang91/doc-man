@@ -24,7 +24,7 @@ object HttpServer:
 
   def routes[F[_]: Async]: HttpRoutes[F] =
     given Transactor[F] = makeTransactor
-    given Logger[F] = Slf4jLogger.getLogger[F]
+    given Logger[F]     = Slf4jLogger.getLogger[F]
 
     Http4sServerInterpreter[F]().toRoutes(
       List(
@@ -32,19 +32,14 @@ object HttpServer:
         Logout.router[F],
         Render.router[F],
         AuthHook.router[F],
-        CheckLogin.router[F],
+        CheckLogin.router[F]
       )
     )
 
   def start(host: Host, port: Port): Resource[IO, Server] =
 
     val app = Router(
-      "/" -> routes[IO],
+      "/" -> routes[IO]
     ).orNotFound
 
-    EmberServerBuilder
-      .default[IO]
-      .withHost(host)
-      .withPort(port)
-      .withHttpApp(app)
-      .build
+    EmberServerBuilder.default[IO].withHost(host).withPort(port).withHttpApp(app).build

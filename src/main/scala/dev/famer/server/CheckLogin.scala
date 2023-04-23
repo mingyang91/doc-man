@@ -16,22 +16,24 @@ object CheckLogin:
     case InternalServerError(error: String)
 
   object CheckLoginResponse:
-    given Codec[CheckLoginResponse.Unauthorized] = deriveCodec[CheckLoginResponse.Unauthorized]
+    given Codec[CheckLoginResponse.Unauthorized]        = deriveCodec[CheckLoginResponse.Unauthorized]
     given Codec[CheckLoginResponse.InternalServerError] = deriveCodec[CheckLoginResponse.InternalServerError]
 
   val ep: Endpoint[Unit, String, CheckLoginResponse, Login.UserInfo, Any] =
-    endpoint
-      .get
+    endpoint.get
       .in("api" / "user" / "me")
       .in(cookie[String]("token"))
       .out(jsonBody[Login.UserInfo])
-      .errorOut(oneOf[CheckLoginResponse](
-        oneOfVariant(statusCode(StatusCode.Unauthorized).and(jsonBody[CheckLoginResponse.Unauthorized])),
-        oneOfVariant(statusCode(StatusCode.InternalServerError).and(jsonBody[CheckLoginResponse.InternalServerError])),
-      ))
+      .errorOut(
+        oneOf[CheckLoginResponse](
+          oneOfVariant(statusCode(StatusCode.Unauthorized).and(jsonBody[CheckLoginResponse.Unauthorized])),
+          oneOfVariant(statusCode(StatusCode.InternalServerError).and(jsonBody[CheckLoginResponse.InternalServerError]))
+        )
+      )
 
   def logic[F[_]: Async](token: String): F[Either[CheckLoginResponse, Login.UserInfo]] =
-    EitherT.fromEither[F](Login.getUserInfoAndExp(token))
+    EitherT
+      .fromEither[F](Login.getUserInfoAndExp(token))
       .leftMap(e => CheckLoginResponse.Unauthorized(e))
       .map { case (userInfo, _) => userInfo }
       .value

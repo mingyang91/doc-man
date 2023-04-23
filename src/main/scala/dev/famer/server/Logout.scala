@@ -18,12 +18,9 @@ import scala.concurrent.duration.*
 object Logout:
 
   val ep: Endpoint[Unit, Unit, Unit, CookieValueWithMeta, Any] =
-    endpoint
-      .get
-      .in("api" / "logout")
-      .out(setCookie("token"))
+    endpoint.get.in("api" / "logout").out(setCookie("token"))
 
-  def logic[F[_] : Async]: F[Either[Unit, CookieValueWithMeta]] =
+  def logic[F[_]: Async]: F[Either[Unit, CookieValueWithMeta]] =
     Async[F].pure(
       Right(
         CookieValueWithMeta(
@@ -40,5 +37,4 @@ object Logout:
       )
     )
 
-
-  def router[F[_] : Async] = ep.serverLogic(_ => logic[F])
+  def router[F[_]: Async] = ep.serverLogic(_ => logic[F])

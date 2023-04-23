@@ -17,4 +17,3 @@ import java.time.format.DateTimeFormatter
 object Main extends ResourceApp.Forever:
   def run(args: List[String]): Resource[IO, Unit] =
     HttpServer.start(ip"0.0.0.0", port"9000").map(_ => ())
-
