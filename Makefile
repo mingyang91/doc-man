@@ -1,3 +1,5 @@
+current_dir = $ (shell pwd)
+
 .PHONY: docker-load
 docker-load:
 	docker load < out/doc-man-render.tar.gz
@@ -14,8 +16,8 @@ docker-save:
 
 .PHONY: psql-dump
 psql-dump:
-	docker run -it --network=doc-man_default -e PGPASSWORD=postgrespassword postgres:12 pg_dump -h postgres -U postgres
+	docker run -it --network=doc-man_default -e PGPASSWORD=postgrespassword postgres:12 pg_dump -h postgres -U postgres > out/db.dump
 
 .PHONY: psql-restore
 psql-restore:
-  docker run -it -v $(pwd):/dump -w /dump --network=doc-man_default -e PGPASSWORD=postgrespassword postgres:12 psql -f /dump/db.dump -U postgres -h postgres
+	./scripts/psql-restore.sh
