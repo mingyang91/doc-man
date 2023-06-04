@@ -8,3 +8,5 @@
 **/metals.sbt
 /sbt.bat
 /sbt-launch.jar
+project/target
+.out

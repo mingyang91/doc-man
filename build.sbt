@@ -6,9 +6,8 @@ val `root/Path` = file(".")
 lazy val root   = project in `root/Path` dependsOn templates enablePlugins JavaAppPackaging
 
 root / name         := "doc-man"
-root / scalaVersion := "3.2.2"
+root / scalaVersion := "3.3.0"
 root / scalacOptions ++= Seq("-Xmax-inlines", "64")
-root / testFrameworks += new TestFramework("zio.test.sbt.ZTestFramework")
 root / scalafmtOnCompile := true
 
 val rLib = root / libraryDependencies
@@ -28,7 +27,7 @@ rLib += "org.typelevel"               %% "log4cats-slf4j"                       
 lazy val templates = project in `root/Path` / "templates" enablePlugins SbtTwirl
 
 templates / name         := "templates"
-templates / scalaVersion := "3.2.2"
+templates / scalaVersion := "3.3.0"
 templates / TwirlKeys.templateImports += "dev.famer.document.datatypes._"
 
 dockerBaseImage := "eclipse-temurin:17-jre"
